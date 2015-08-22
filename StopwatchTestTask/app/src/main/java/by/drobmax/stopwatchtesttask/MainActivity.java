@@ -1,22 +1,22 @@
 package by.drobmax.stopwatchtesttask;
 
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
 import android.os.Vibrator;
 import android.support.v7.app.ActionBarActivity;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Chronometer;
 import android.widget.ListView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import by.drobmax.stopwatchtesttask.adapters.TimeListAdapter;
 import by.drobmax.stopwatchtesttask.database.TimeListDataProvider;
@@ -25,10 +25,11 @@ import by.drobmax.stopwatchtesttask.models.TimeListModel;
 import by.drobmax.teeeeeeeest.R;
 
 
-public class MainActivity extends ActionBarActivity implements OnDataChangedListener{
+public class MainActivity extends ActionBarActivity implements OnDataChangedListener {
     private Button btnClick;
     private TextView tvTime;
     private ListView listViewTimes;
+    private ScrollView scrollView;
     private long tickTime = 0;
     private Handler handler;
     private Runnable saveTimeList;
@@ -36,7 +37,7 @@ public class MainActivity extends ActionBarActivity implements OnDataChangedList
     private int mAction = 0, mKeyCode = 0;
     private long time = 0;
     private Chronometer chr;
-    private boolean first = false;
+    private boolean isFirst = false;
     private TimeListDataProvider dataProvider;
     private TimeListAdapter adapter;
 
@@ -59,12 +60,12 @@ public class MainActivity extends ActionBarActivity implements OnDataChangedList
                         String text = tvTime.getText().toString();
                         tvTime.setText("");
                         dataProvider = new TimeListDataProvider(MainActivity.this);
-                        dataProvider.saveTimes(text.replaceAll("\n","; "));
+                        dataProvider.saveTimes(text.replaceAll("\n", "; "));
                         onDataChange();
                         vibrator.vibrate(500);
                         chr.stop();
                         chr.setBase(SystemClock.elapsedRealtime());
-                        first = true;
+                        isFirst = true;
                     }
                 });
             }
@@ -72,7 +73,8 @@ public class MainActivity extends ActionBarActivity implements OnDataChangedList
         btnClick = (Button) findViewById(R.id.btnClick);
         tvTime = (TextView) findViewById(R.id.textView);
         chr = (Chronometer) findViewById(R.id.chronometer);
-        listViewTimes = (ListView)findViewById(R.id.listView);
+        listViewTimes = (ListView) findViewById(R.id.listView);
+        scrollView = (ScrollView)findViewById(R.id.scrollView);
 
         btnClick.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -82,8 +84,8 @@ public class MainActivity extends ActionBarActivity implements OnDataChangedList
                         Toast.LENGTH_SHORT).show();
             }
         });
+        onDataChange();
     }
-
 
 
     @Override
@@ -91,47 +93,56 @@ public class MainActivity extends ActionBarActivity implements OnDataChangedList
         int action = event.getAction();
         int keyCode = event.getKeyCode();
 
+        //if click button not setted
         if (!btnClick.isEnabled()) {
-            mAction = action;
-            mKeyCode = keyCode;
-            vibrator.vibrate(500);
-            Toast.makeText(this, "selected!", Toast.LENGTH_SHORT).show();
-            first = true;
-            btnClick.setEnabled(true);
-            btnClick.setVisibility(View.GONE);
+            setClickButton(action, keyCode);
             return true;
         }
+
         if ((action == mAction) && (keyCode == mKeyCode)) {
-            if (first) {
-                Log.d("logs", "first");
-                first = false;
-            } else {
-                handler.removeCallbacks(saveTimeList);
-                Log.d("logs", "not first");
-                tickTime = (System.currentTimeMillis() - time);
-                tvTime.append(tickTime + "\n");
-            }
-            handler.postDelayed(saveTimeList,10000);
             chr.setBase(SystemClock.elapsedRealtime());
             chr.start();
+            tickTime = (System.currentTimeMillis() - time);
             time = System.currentTimeMillis();
+            if (isFirst) {
+                Log.d("logs", "isFirst");
+                isFirst = false;
+            } else {
+                handler.removeCallbacks(saveTimeList);
+                Log.d("logs", "not isFirst");
+                tvTime.append(tickTime + "\n");
+                scrollView.smoothScrollTo(0,tvTime.getBottom());
+            }
+            handler.postDelayed(saveTimeList, 10000);
             return true;
-        } else {
-            return super.dispatchKeyEvent(event);
         }
+
+        return super.dispatchKeyEvent(event);
+
+    }
+
+    private void setClickButton(int action, int keyCode) {
+        mAction = action;
+        mKeyCode = keyCode;
+        vibrator.vibrate(500);
+        Toast.makeText(this, "selected!", Toast.LENGTH_SHORT).show();
+        isFirst = true;
+        btnClick.setEnabled(true);
+        btnClick.setVisibility(View.GONE);
     }
 
     @Override
     public void onDataChange() {
-        dataProvider  = new TimeListDataProvider(this);
+        dataProvider = new TimeListDataProvider(this);
         dataProvider.getTimes(new TimeListDataProvider.TimesRequestCallbacks() {
             @Override
             public void onLocksLoaded(final ArrayList<TimeListModel> times) {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        adapter = new TimeListAdapter(times ,MainActivity.this);
+                        adapter = new TimeListAdapter(times, MainActivity.this);
                         listViewTimes.setAdapter(adapter);
+                        listViewTimes.setTranscriptMode(ListView.TRANSCRIPT_MODE_ALWAYS_SCROLL);
                     }
                 });
             }
