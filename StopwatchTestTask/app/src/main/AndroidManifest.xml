@@ -16,6 +16,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <provider
+            android:authorities="by.drobmax.stopwatchtesttask.database"
+            android:name="by.drobmax.stopwatchtesttask.database.TimeListContentProvider"
+            android:multiprocess="true"></provider>
     </application>
 
 </manifest>
